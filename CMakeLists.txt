@@ -8,7 +8,7 @@ project(any)
 find_package(RapidJSON CONFIG REQUIRED)
 find_path(BOOST_FUSION_INCLUDE_DIRS "boost/fusion/adapted.hpp")
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 11)
 
 include_directories(.)
 
