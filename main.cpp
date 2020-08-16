@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -243,6 +244,10 @@ int main() {
   Singer s1Casted = json::AnyCast<Singer>(any);
   json = json::Dump(s1Casted);
   std::cout << "s1 casted: " << json << std::endl;
+  // Any a = std::make_shared<Singer>(xxxx);
+  auto spSinger = std::make_shared<Singer>(Singer{"rapper", 16});
+  // any = spSinger;
+  // Bad cast
   try {
     json::AnyCast<Band>(any);
   } catch (const std::bad_cast& e) {
@@ -256,8 +261,13 @@ int main() {
   // Band
   Band band{{s1, s1}};
   json = json::Dump(band);
-  std::cout << json << std::endl;
+  std::cout << "band: " << json << std::endl;
   Band bandParsed = json::Parse<Band>(json);
+  json = json::Dump(bandParsed);
+  std::cout << "band parsed: " << json << std::endl;
+  any = band;
+  json = json::Dump(any);
+  std::cout << "band any: " << json << std::endl;
   // Friend
   Friend f1{"my best friend", Singer{"rocker", 18}};
   json = json::Dump(f1);
@@ -276,6 +286,8 @@ int main() {
   Address addr1{"china", "beijing", "wangjing", {p2}};
   json = json::Dump(addr1);
   std::cout << json << std::endl;
+  // Any a = std::make_shared<Person>(xxxx);
+
   // Final!
   Person p1{"p1", 4, addr1, {f1, f2, f3}, "the kind!"};
   json = json::Dump(p1);

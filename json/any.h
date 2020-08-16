@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -50,6 +51,24 @@ class Any final {
 
   Any(const char* s) : holder(new ValueHolder<std::string>(std::string(s))) {
     jsonValue.SetNull();
+  }
+
+  Any& operator=(const Any& any) {
+    if (any.holder != nullptr) {
+      holder = any.holder->Clone();
+      jsonValue.SetNull();
+      return *this;
+    }
+    holder = nullptr;
+    this->jsonValue.CopyFrom(any.jsonValue, this->jsonDoc.GetAllocator());
+    return *this;
+  }
+
+  template <typename T>
+  Any& operator=(const T& o) {
+    holder = new ValueHolder<T>(o);
+    jsonValue.SetNull();
+    return *this;
   }
 
   const std::type_info& TypeInfo() const {
