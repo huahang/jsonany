@@ -246,7 +246,9 @@ int main() {
   std::cout << "s1 casted: " << json << std::endl;
   // Any a = std::make_shared<Singer>(xxxx);
   auto spSinger = std::make_shared<Singer>(Singer{"rapper", 16});
-  // any = spSinger;
+  any = spSinger;
+  json = json::Dump(any);
+  std::cout << "s1 sp: " << json << std::endl;
   // Bad cast
   try {
     json::AnyCast<Band>(any);
@@ -286,8 +288,6 @@ int main() {
   Address addr1{"china", "beijing", "wangjing", {p2}};
   json = json::Dump(addr1);
   std::cout << json << std::endl;
-  // Any a = std::make_shared<Person>(xxxx);
-
   // Final!
   Person p1{"p1", 4, addr1, {f1, f2, f3}, "the kind!"};
   json = json::Dump(p1);
@@ -296,7 +296,15 @@ int main() {
   std::string json2;
   json2 = json::Dump(p1Parsed);
   std::cout << json2 << std::endl;
+  json::Any anyPerson = std::make_shared<Person>(p1);
+  std::string json3;
+  json3 = json::Dump(anyPerson);
+  std::cout << json3 << std::endl;
   if (json != json2) {
+    std::cout << "Bad!" << std::endl;
+    return EXIT_FAILURE;
+  }
+  if (json != json3) {
     std::cout << "Bad!" << std::endl;
     return EXIT_FAILURE;
   }

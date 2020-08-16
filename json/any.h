@@ -49,6 +49,9 @@ class Any final {
     jsonValue.SetNull();
   }
 
+  template <typename T>
+  Any(const std::shared_ptr<T>& p) : Any(*p) {}
+
   Any(const char* s) : holder(new ValueHolder<std::string>(std::string(s))) {
     jsonValue.SetNull();
   }
@@ -67,6 +70,13 @@ class Any final {
   template <typename T>
   Any& operator=(const T& o) {
     holder = new ValueHolder<T>(o);
+    jsonValue.SetNull();
+    return *this;
+  }
+
+  template <typename T>
+  Any& operator=(const std::shared_ptr<T>& p) {
+    holder = new ValueHolder<T>(*p);
     jsonValue.SetNull();
     return *this;
   }
