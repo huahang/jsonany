@@ -3,10 +3,11 @@
  * @since 2020-08-15
  */
 
+#include <stdlib.h>
+
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include <stdlib.h>
 #include <string>
 #include <vector>
 
@@ -19,18 +20,18 @@ struct Singer {
   int age;
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
     v.SetObject();
     v.AddMember("type", type, alloc);
     v.AddMember("age", age, alloc);
   }
 
-  void Parse(const rapidjson::Value &v) {
+  void Parse(const rapidjson::Value& v) {
     using rapidjson::Value;
     if (!v.HasMember("type")) {
       throw std::invalid_argument("No 'type' in JSON");
     }
-    const Value &typeValue = v["type"];
+    const Value& typeValue = v["type"];
     if (!typeValue.IsString()) {
       throw std::invalid_argument("Invalid 'type' in JSON");
     }
@@ -38,7 +39,7 @@ struct Singer {
     if (!v.HasMember("age")) {
       throw std::invalid_argument("No 'age' in JSON");
     }
-    const Value &ageValue = v["age"];
+    const Value& ageValue = v["age"];
     if (!ageValue.IsInt()) {
       throw std::invalid_argument("Invalid 'age' in JSON");
     }
@@ -50,7 +51,7 @@ struct Band {
   std::vector<Singer> singers;
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
     using rapidjson::Value;
     Value singersValue;
     json::Dump(singersValue, alloc, singers);
@@ -58,12 +59,12 @@ struct Band {
     v.AddMember("singers", singersValue, alloc);
   }
 
-  void Parse(const rapidjson::Value &v) {
+  void Parse(const rapidjson::Value& v) {
     using rapidjson::Value;
     if (!v.HasMember("singers")) {
       throw std::invalid_argument("No 'singers' in JSON");
     }
-    const Value &singersValue = v["singers"];
+    const Value& singersValue = v["singers"];
     if (!singersValue.IsArray()) {
       throw std::invalid_argument("Invalid 'singers' in JSON");
     }
@@ -78,7 +79,7 @@ struct Address {
   std::vector<Person> neighbors;
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
     using rapidjson::Value;
     v.SetObject();
     v.AddMember("country", country, alloc);
@@ -89,12 +90,12 @@ struct Address {
     v.AddMember("neighbors", neighborsValue, alloc);
   }
 
-  void Parse(const rapidjson::Value &v) {
+  void Parse(const rapidjson::Value& v) {
     using rapidjson::Value;
     if (!v.HasMember("country")) {
       throw std::invalid_argument("No 'country' in JSON");
     }
-    const Value &countryValue = v["country"];
+    const Value& countryValue = v["country"];
     if (!countryValue.IsString()) {
       throw std::invalid_argument("Invalid 'country' in JSON");
     }
@@ -102,7 +103,7 @@ struct Address {
     if (!v.HasMember("city")) {
       throw std::invalid_argument("No 'city' in JSON");
     }
-    const Value &cityValue = v["city"];
+    const Value& cityValue = v["city"];
     if (!cityValue.IsString()) {
       throw std::invalid_argument("Invalid 'city' in JSON");
     }
@@ -110,7 +111,7 @@ struct Address {
     if (!v.HasMember("street")) {
       throw std::invalid_argument("No 'street' in JSON");
     }
-    const Value &streetValue = v["street"];
+    const Value& streetValue = v["street"];
     if (!streetValue.IsString()) {
       throw std::invalid_argument("Invalid 'street' in JSON");
     }
@@ -118,7 +119,7 @@ struct Address {
     if (!v.HasMember("neighbors")) {
       throw std::invalid_argument("No 'neighbors' in JSON");
     }
-    const Value &neighborsValue = v["neighbors"];
+    const Value& neighborsValue = v["neighbors"];
     if (!neighborsValue.IsArray()) {
       throw std::invalid_argument("Invalid 'neighbors' in JSON");
     }
@@ -131,7 +132,7 @@ struct Friend {
   json::Any secret;
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
     using rapidjson::Value;
     v.SetObject();
     v.AddMember("relation", relation, alloc);
@@ -140,12 +141,12 @@ struct Friend {
     v.AddMember("secret", secretValue, alloc);
   }
 
-  void Parse(const rapidjson::Value &v) {
+  void Parse(const rapidjson::Value& v) {
     using rapidjson::Value;
     if (!v.HasMember("relation")) {
       throw std::invalid_argument("No 'relation' in JSON");
     }
-    const Value &relationValue = v["relation"];
+    const Value& relationValue = v["relation"];
     if (!relationValue.IsString()) {
       throw std::invalid_argument("Invalid 'relation' in JSON");
     }
@@ -153,7 +154,7 @@ struct Friend {
     if (!v.HasMember("secret")) {
       throw std::invalid_argument("No 'secret' in JSON");
     }
-    const Value &secretValue = v["secret"];
+    const Value& secretValue = v["secret"];
     this->secret.Parse(secretValue);
   }
 };
@@ -166,7 +167,7 @@ struct Person {
   json::Any secret;
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
     using rapidjson::Value;
     v.SetObject();
     v.AddMember("name", name, alloc);
@@ -182,12 +183,12 @@ struct Person {
     v.AddMember("secret", secretValue, alloc);
   }
 
-  void Parse(const rapidjson::Value &v) {
+  void Parse(const rapidjson::Value& v) {
     using rapidjson::Value;
     if (!v.HasMember("name")) {
       throw std::invalid_argument("No 'name' in JSON");
     }
-    const Value &nameValue = v["name"];
+    const Value& nameValue = v["name"];
     if (!nameValue.IsString()) {
       throw std::invalid_argument("Invalid 'name' in JSON");
     }
@@ -195,7 +196,7 @@ struct Person {
     if (!v.HasMember("age")) {
       throw std::invalid_argument("No 'age' in JSON");
     }
-    const Value &ageValue = v["age"];
+    const Value& ageValue = v["age"];
     if (!ageValue.IsInt()) {
       throw std::invalid_argument("Invalid 'age' in JSON");
     }
@@ -203,7 +204,7 @@ struct Person {
     if (!v.HasMember("address")) {
       throw std::invalid_argument("No 'address' in JSON");
     }
-    const Value &addressValue = v["address"];
+    const Value& addressValue = v["address"];
     if (!addressValue.IsObject()) {
       throw std::invalid_argument("Invalid 'address' in JSON");
     }
@@ -211,7 +212,7 @@ struct Person {
     if (!v.HasMember("friends")) {
       throw std::invalid_argument("No 'friends' in JSON");
     }
-    const Value &friendsValue = v["friends"];
+    const Value& friendsValue = v["friends"];
     if (!friendsValue.IsArray()) {
       throw std::invalid_argument("Invalid 'friends' in JSON");
     }
@@ -219,7 +220,7 @@ struct Person {
     if (!v.HasMember("secret")) {
       throw std::invalid_argument("No 'secret' in JSON");
     }
-    const Value &secretValue = v["secret"];
+    const Value& secretValue = v["secret"];
     this->secret.Parse(secretValue);
   }
 };
@@ -229,21 +230,27 @@ int main() {
   std::string json;
   // Singer
   Singer s1{"rapper", 16};
-  json = json::Dump(s1);
-  std::cout << json << std::endl;
   json = json::DumpPretty(s1);
   std::cout << json << std::endl;
+  json = json::Dump(s1);
+  std::cout << "s1: " << json << std::endl;
   Singer s1Parsed = json::Parse<Singer>(json);
+  json = json::Dump(s1Parsed);
+  std::cout << "s1 parsed: " << json << std::endl;
   json::Any any = s1;
+  json = json::Dump(any);
+  std::cout << "s1 any: " << json << std::endl;
   Singer s1Casted = json::AnyCast<Singer>(any);
+  json = json::Dump(s1Casted);
+  std::cout << "s1 casted: " << json << std::endl;
   try {
     json::AnyCast<Band>(any);
-  } catch (const std::bad_cast &e) {
+  } catch (const std::bad_cast& e) {
     std::cout << "Can't cast any to Band" << std::endl;
   }
   try {
     json::Parse<Singer>("[]");
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cout << e.what() << std::endl;
   }
   // Band

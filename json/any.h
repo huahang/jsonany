@@ -10,77 +10,141 @@
 
 #ifndef RAPIDJSON_HAS_STDSTRING
 #define RAPIDJSON_HAS_STDSTRING 1
-#endif // RAPIDJSON_HAS_STDSTRING
-
-#include <iostream>
-#include <stdexcept>
-#include <stdint.h>
-#include <string>
-#include <type_traits>
-#include <typeinfo>
-#include <utility>
-#include <vector>
+#endif  // RAPIDJSON_HAS_STDSTRING
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <stdint.h>
+
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <typeinfo>
+#include <utility>
+#include <vector>
 
 namespace json {
 
 class Any final {
-public:
-  Any() { jsonValue.SetNull(); }
+ public:
+  Any() : holder(nullptr) { jsonValue.SetNull(); }
 
-  Any(const Any &any) {
+  Any(const Any& any) : Any() {
+    if (any.holder != nullptr) {
+      holder = any.holder->Clone();
+      jsonValue.SetNull();
+      return;
+    }
+    holder = nullptr;
     this->jsonValue.CopyFrom(any.jsonValue, this->jsonDoc.GetAllocator());
   }
 
-  Any(const int i) { jsonValue.SetInt(i); }
-
-  Any(const char *str) { jsonValue.SetString(str, jsonDoc.GetAllocator()); }
-
-  Any(const std::string &str) {
-    jsonValue.SetString(str, jsonDoc.GetAllocator());
+  template <typename T>
+  Any(const T& v) : holder(new ValueHolder<T>(v)) {
+    jsonValue.SetNull();
   }
 
-  template <typename T> Any(const T &t) {
-    t.Dump(jsonValue, jsonDoc.GetAllocator());
+  Any(const char* s) : holder(new ValueHolder<std::string>(std::string(s))) {
+    jsonValue.SetNull();
   }
 
-  template <typename T> T Cast() const {
-    T ret;
-    try {
-      ret.Parse(this->jsonValue);
-    } catch (const std::invalid_argument &e) {
-      throw std::bad_cast();
+  const std::type_info& TypeInfo() const {
+    return holder != nullptr ? holder->TypeInfo() : typeid(void);
+  }
+
+  template <typename T>
+  const T* ValuePointer() {
+    if (holder == nullptr && (!jsonValue.IsNull())) {
+      T o;
+      try {
+        o.Parse(this->jsonValue);
+      } catch (const std::invalid_argument& e) {
+        return nullptr;
+      }
+      holder = new ValueHolder<T>(o);
     }
-    return ret;
+    const auto& holderType = TypeInfo();
+    const auto& valueType = typeid(T);
+    if (holderType != valueType) {
+      return nullptr;
+    }
+    return &static_cast<ValueHolder<T>*>(holder)->value;
+  }
+
+  template <typename T>
+  const T& Cast() {
+    const T* result = ValuePointer<T>();
+    if (result != nullptr) {
+      return *result;
+    }
+    throw std::bad_cast();
   }
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
+    if (jsonValue.IsNull() && holder != nullptr) {
+      holder->Dump(*this);
+    }
     v.CopyFrom(this->jsonValue, alloc);
   }
 
-  void Parse(const rapidjson::Value &v) {
+  void Parse(const rapidjson::Value& v) {
     jsonValue.CopyFrom(v, jsonDoc.GetAllocator());
+    holder = nullptr;
   }
 
-private:
+ private:
+  class HolderInterface {
+   public:
+    virtual HolderInterface* Clone() const = 0;
+    virtual const std::type_info& TypeInfo() const = 0;
+    virtual void Dump(Any& any) = 0;
+    virtual ~HolderInterface() {}
+  };
+
+  template <typename ValueType>
+  class ValueHolder : public HolderInterface {
+   public:
+    ValueHolder(const ValueType& v) : value(v) {}
+    virtual HolderInterface* Clone() const { return new ValueHolder(value); };
+    virtual const std::type_info& TypeInfo() const { return typeid(ValueType); }
+    virtual void Dump(Any& any) {
+      value.Dump(any.jsonValue, any.jsonDoc.GetAllocator());
+    }
+    ValueType value;
+  };
+
+  HolderInterface* holder;
+
+ private:
   rapidjson::Document jsonDoc;
   rapidjson::Value jsonValue;
 };
 
-template <typename T> T AnyCast(const Any &any) { return any.Cast<T>(); }
+template <>
+inline void Any::ValueHolder<std::string>::Dump(Any& any) {
+  any.jsonValue.SetString(this->value, any.jsonDoc.GetAllocator());
+}
+
+template <>
+inline void Any::ValueHolder<int>::Dump(Any& any) {
+  any.jsonValue.SetInt(this->value);
+}
+
+template <typename T>
+const T& AnyCast(Any& any) {
+  return any.Cast<T>();
+}
 
 template <typename T, typename AllocatorType>
-void Dump(rapidjson::Value &array, AllocatorType &alloc,
-          const std::vector<T> &v) {
+void Dump(rapidjson::Value& array, AllocatorType& alloc, std::vector<T>& v) {
   using rapidjson::Value;
   array.SetArray();
-  for (const T &item : v) {
+  for (auto& item : v) {
     Value v;
     v.SetObject();
     auto object = v.GetObject();
@@ -90,7 +154,8 @@ void Dump(rapidjson::Value &array, AllocatorType &alloc,
   }
 }
 
-template <typename T, typename Writer> std::string Dump(const T &obj) {
+template <typename T, typename Writer>
+std::string Dump(T& obj) {
   using rapidjson::Document;
   using rapidjson::StringBuffer;
   using rapidjson::Value;
@@ -105,15 +170,18 @@ template <typename T, typename Writer> std::string Dump(const T &obj) {
   return sb.GetString();
 }
 
-template <typename T> std::string Dump(const T &obj) {
+template <typename T>
+std::string Dump(T& obj) {
   return Dump<T, rapidjson::Writer<rapidjson::StringBuffer>>(obj);
 }
 
-template <typename T> std::string DumpPretty(const T &obj) {
+template <typename T>
+std::string DumpPretty(T& obj) {
   return Dump<T, rapidjson::PrettyWriter<rapidjson::StringBuffer>>(obj);
 }
 
-template <typename T> std::vector<T> ParseArray(const rapidjson::Value &value) {
+template <typename T>
+std::vector<T> ParseArray(const rapidjson::Value& value) {
   using rapidjson::Value;
   std::vector<T> ret;
   if (!value.IsArray()) {
@@ -123,7 +191,7 @@ template <typename T> std::vector<T> ParseArray(const rapidjson::Value &value) {
   auto itr = jsonArray.begin();
   auto end = jsonArray.end();
   for (; itr != end; itr++) {
-    auto &v = *itr;
+    auto& v = *itr;
     T obj;
     obj.Parse(v);
     ret.push_back(obj);
@@ -131,7 +199,8 @@ template <typename T> std::vector<T> ParseArray(const rapidjson::Value &value) {
   return ret;
 }
 
-template <typename T> T Parse(const std::string &json) {
+template <typename T>
+T Parse(const std::string& json) {
   using rapidjson::Document;
   using rapidjson::Value;
   Document doc;
@@ -149,6 +218,6 @@ template <typename T> T Parse(const std::string &json) {
   return ret;
 }
 
-} // namespace json
+}  // namespace json
 
-#endif // JSON_ANY_H
+#endif  // JSON_ANY_H
