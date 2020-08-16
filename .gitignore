@@ -37,3 +37,10 @@
 /build
 /cmake-build*
 /vcpkg_installed
+
+# cmake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+any
+cmake_install.cmake
