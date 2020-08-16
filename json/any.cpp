@@ -5,6 +5,4 @@
 
 #include "any.h"
 
-#include <string>
-
 namespace json {} // namespace json
