@@ -5,8 +5,6 @@ set(CMAKE_TOOLCHAIN_FILE
 
 project(any)
 
-find_path(BOOST_FUSION_INCLUDE_DIRS "boost/fusion/adapted.hpp")
-find_path(BOOST_HANA_INCLUDE_DIRS "boost/hana.hpp")
 find_package(RapidJSON CONFIG REQUIRED)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -16,6 +14,4 @@ add_executable(any
   json/any.cpp
   json/any.h)
 
-target_include_directories(any PRIVATE ${BOOST_FUSION_INCLUDE_DIRS})
-target_include_directories(any PRIVATE ${BOOST_HANA_INCLUDE_DIRS})
 target_include_directories(any PRIVATE ${RAPIDJSON_INCLUDE_DIRS})

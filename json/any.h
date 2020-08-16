@@ -12,9 +12,13 @@
 #define RAPIDJSON_HAS_STDSTRING 1
 #endif // RAPIDJSON_HAS_STDSTRING
 
-//#ifndef BOOST_HANA_CONFIG_DISABLE_CONCEPT_CHECKS
-//#define BOOST_HANA_CONFIG_DISABLE_CONCEPT_CHECKS 1
-//#endif // BOOST_HANA_CONFIG_DISABLE_CONCEPT_CHECKS
+#include <iostream>
+#include <stdexcept>
+#include <stdint.h>
+#include <string>
+#include <type_traits>
+#include <typeinfo>
+#include <utility>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -22,179 +26,126 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include <boost/hana.hpp>
-#include <iostream>
-#include <stdexcept>
-#include <string>
-#include <type_traits>
-#include <typeinfo>
-#include <utility>
-
 namespace json {
-
-typedef rapidjson::Writer<rapidjson::StringBuffer> Writer;
-
-class Any;
-
-template <typename ValueType> const ValueType &AnyCast(const Any &a);
-
-template <typename T> void Dump(const std::vector<T> &, Writer &);
-
-template <typename T>
-std::enable_if_t<boost::hana::Struct<T>::value, void> Dump(const T &, Writer &);
 
 class Any final {
 public:
-  // constructors
-  Any() : holder(nullptr) {}
+  Any() { jsonValue.SetNull(); }
 
-  Any(const Any &a) : Any() {
-    if (a.holder == nullptr) {
-      this->holder = nullptr;
-      return;
+  Any(const Any &any) {
+    this->jsonValue.CopyFrom(any.jsonValue, this->jsonDoc.GetAllocator());
+  }
+
+  Any(const int i) { jsonValue.SetInt(i); }
+
+  Any(const char *str) { jsonValue.SetString(str, jsonDoc.GetAllocator()); }
+
+  Any(const std::string &str) {
+    jsonValue.SetString(str, jsonDoc.GetAllocator());
+  }
+
+  template <typename T> Any(const T &t) {
+    t.Dump(jsonValue, jsonDoc.GetAllocator());
+  }
+
+  template <typename T> T Cast() const {
+    T ret;
+    try {
+      ret.Parse(this->jsonValue);
+    } catch (const std::invalid_argument &e) {
+      throw std::bad_cast();
     }
-    this->holder = a.holder->Clone();
+    return ret;
   }
 
-  Any(Any &&a) : Any() { this->Swap(a); }
-
-  // destructor
-  ~Any() {
-    if (this->holder != nullptr) {
-      delete this->holder;
-    }
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+    v.CopyFrom(this->jsonValue, alloc);
   }
 
-  // assignment operator
-  Any &operator=(const Any &a) {
-    Any copy(a);
-    return this->Swap(copy);
-  }
-
-  // constructors from value
-  template <typename ValueType>
-  Any(const ValueType &v) : holder(new ValueHolder<ValueType>(v)) {}
-
-  Any(const char *str)
-      : holder(new ValueHolder<std::string>(std::string(str))) {}
-
-  // assignment from value
-  template <typename ValueType> Any &operator=(const ValueType &v) {
-    Any a(v);
-    return this->Swap(a);
-  }
-
-  // get type info
-  const std::type_info &TypeInfo() const {
-    return holder != nullptr ? holder->TypeInfo() : typeid(void);
-  }
-
-  // is null
-  const bool IsNull() const { return holder == nullptr; }
-
-  // get value pointer
-  template <typename ValueType> const ValueType *ValuePointer() const {
-    const auto &holderType = TypeInfo();
-    const auto &valueType = typeid(ValueType);
-    if (holderType != valueType) {
-      return nullptr;
-    }
-    return &static_cast<ValueHolder<ValueType> *>(holder)->value;
-  }
-
-  // swap
-  Any &Swap(Any &a) {
-    std::swap(holder, a.holder);
-    return *this;
-  }
-
-  // serialization
-  void Dump(Writer &w) const {
-    if (holder == nullptr) {
-      w.Null();
-      return;
-    }
-    holder->Dump(w);
+  void Parse(const rapidjson::Value &v) {
+    jsonValue.CopyFrom(v, jsonDoc.GetAllocator());
   }
 
 private:
-  class HolderInterface {
-  public:
-    virtual HolderInterface *Clone() const = 0;
-    virtual const std::type_info &TypeInfo() const = 0;
-    virtual void Dump(Writer &) const = 0;
-    virtual ~HolderInterface() {}
-  };
-
-  template <typename ValueType> class ValueHolder : public HolderInterface {
-  public:
-    ValueHolder(const ValueType &v) : value(v) {}
-
-    virtual HolderInterface *Clone() const { return new ValueHolder(value); };
-
-    virtual const std::type_info &TypeInfo() const { return typeid(ValueType); }
-
-    virtual void Dump(Writer &w) const { json::Dump(value, w); };
-
-    const ValueType value;
-  };
-
-  HolderInterface *holder;
+  rapidjson::Document jsonDoc;
+  rapidjson::Value jsonValue;
 };
 
-template <> inline void Any::ValueHolder<std::string>::Dump(Writer &w) const {
-  w.String(this->value);
-};
+template <typename T> T AnyCast(const Any &any) { return any.Cast<T>(); }
 
-template <> inline void Any::ValueHolder<int>::Dump(Writer &w) const {
-  w.Int(this->value);
-};
-
-template <typename ValueType> const ValueType &AnyCast(const Any &a) {
-  const ValueType *result = a.ValuePointer<ValueType>();
-  if (result != nullptr) {
-    return *result;
+template <typename T, typename AllocatorType>
+void Dump(rapidjson::Value &array, AllocatorType &alloc,
+          const std::vector<T> &v) {
+  using rapidjson::Value;
+  array.SetArray();
+  for (const T &item : v) {
+    Value v;
+    v.SetObject();
+    auto object = v.GetObject();
+    item.Dump(v, alloc);
+    v.Set(object);
+    array.PushBack(v, alloc);
   }
-  throw std::bad_cast();
 }
 
-inline void Dump(const Any &any, Writer &w) { any.Dump(w); }
-
-inline void Dump(const bool b, Writer &w) { w.Bool(b); }
-
-inline void Dump(const int i, Writer &w) { w.Int(i); }
-
-inline void Dump(const int64_t i, Writer &w) { w.Int64(i); }
-
-inline void Dump(const std::string &s, Writer &w) { w.String(s); }
-
-template <typename T>
-std::enable_if_t<boost::hana::Struct<T>::value, void> Dump(const T &o,
-                                                           Writer &w) {
-  namespace hana = boost::hana;
-  w.StartObject();
-  boost::hana::for_each(boost::hana::keys(o), [&](auto name) {
-    auto const &member = boost::hana::at_key(o, name);
-    w.String(boost::hana::to<char const *>(name));
-    Dump(member, w);
-  });
-  w.EndObject();
-}
-
-template <typename T> void Dump(const std::vector<T> &array, Writer &w) {
-  w.StartArray();
-  for (const auto &item : array) {
-    Dump(item, w);
-  }
-  w.EndArray();
-}
-
-template <typename T>
-std::enable_if_t<boost::hana::Struct<T>::value, std::string> Dump(const T &o) {
-  rapidjson::StringBuffer sb;
+template <typename T, typename Writer> std::string Dump(const T &obj) {
+  using rapidjson::Document;
+  using rapidjson::StringBuffer;
+  using rapidjson::Value;
+  StringBuffer sb;
   Writer w(sb);
-  Dump(o, w);
+  Document doc;
+  Value v;
+  obj.Dump(v, doc.GetAllocator());
+  doc.SetObject();
+  doc.Set(v.GetObject());
+  doc.Accept(w);
   return sb.GetString();
+}
+
+template <typename T> std::string Dump(const T &obj) {
+  return Dump<T, rapidjson::Writer<rapidjson::StringBuffer>>(obj);
+}
+
+template <typename T> std::string DumpPretty(const T &obj) {
+  return Dump<T, rapidjson::PrettyWriter<rapidjson::StringBuffer>>(obj);
+}
+
+template <typename T> std::vector<T> ParseArray(const rapidjson::Value &value) {
+  using rapidjson::Value;
+  std::vector<T> ret;
+  if (!value.IsArray()) {
+    throw std::invalid_argument("invalid value");
+  }
+  auto jsonArray = value.GetArray();
+  auto itr = jsonArray.begin();
+  auto end = jsonArray.end();
+  for (; itr != end; itr++) {
+    auto &v = *itr;
+    T obj;
+    obj.Parse(v);
+    ret.push_back(obj);
+  }
+  return ret;
+}
+
+template <typename T> T Parse(const std::string &json) {
+  using rapidjson::Document;
+  using rapidjson::Value;
+  Document doc;
+  doc.Parse(json);
+  if (!doc.IsObject()) {
+    std::string err = "Invalid JSON: " + json;
+    throw std::invalid_argument(err);
+  }
+  auto object = doc.GetObject();
+  Value v;
+  v.SetObject();
+  v.Set(object);
+  T ret;
+  ret.Parse(v);
+  return ret;
 }
 
 } // namespace json

@@ -3,265 +3,254 @@
  * @since 2020-08-15
  */
 
-#include <stdlib.h>
-
 #include <algorithm>
-#include <boost/fusion/include/vector.hpp>
-#include <boost/hana.hpp>
-#include <boost/hana/ext/boost/fusion/vector.hpp>
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
 #include <string>
 #include <vector>
 
 #include "json/any.h"
 
-namespace hana = boost::hana;
-namespace fusion = boost::fusion;
-
 struct Person;
 
 struct Singer {
-  BOOST_HANA_DEFINE_STRUCT(Singer, (std::string, type), (int, age));
+  std::string type;
+  int age;
+
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+    v.SetObject();
+    v.AddMember("type", type, alloc);
+    v.AddMember("age", age, alloc);
+  }
+
+  void Parse(const rapidjson::Value &v) {
+    using rapidjson::Value;
+    if (!v.HasMember("type")) {
+      throw std::invalid_argument("No 'type' in JSON");
+    }
+    const Value &typeValue = v["type"];
+    if (!typeValue.IsString()) {
+      throw std::invalid_argument("Invalid 'type' in JSON");
+    }
+    this->type = typeValue.GetString();
+    if (!v.HasMember("age")) {
+      throw std::invalid_argument("No 'age' in JSON");
+    }
+    const Value &ageValue = v["age"];
+    if (!ageValue.IsInt()) {
+      throw std::invalid_argument("Invalid 'age' in JSON");
+    }
+    this->age = ageValue.GetInt();
+  }
 };
 
 struct Band {
-  BOOST_HANA_DEFINE_STRUCT(Band, (std::vector<Singer>, singers));
+  std::vector<Singer> singers;
+
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+    using rapidjson::Value;
+    Value singersValue;
+    json::Dump(singersValue, alloc, singers);
+    v.SetObject();
+    v.AddMember("singers", singersValue, alloc);
+  }
+
+  void Parse(const rapidjson::Value &v) {
+    using rapidjson::Value;
+    if (!v.HasMember("singers")) {
+      throw std::invalid_argument("No 'singers' in JSON");
+    }
+    const Value &singersValue = v["singers"];
+    if (!singersValue.IsArray()) {
+      throw std::invalid_argument("Invalid 'singers' in JSON");
+    }
+    this->singers = json::ParseArray<Singer>(singersValue);
+  }
 };
 
 struct Address {
-  BOOST_HANA_DEFINE_STRUCT(Address, (std::string, country), (std::string, city),
-                           (std::string, street),
-                           (std::vector<Person>, neighbors));
+  std::string country;
+  std::string city;
+  std::string street;
+  std::vector<Person> neighbors;
+
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+    using rapidjson::Value;
+    v.SetObject();
+    v.AddMember("country", country, alloc);
+    v.AddMember("city", city, alloc);
+    v.AddMember("street", street, alloc);
+    Value neighborsValue;
+    json::Dump(neighborsValue, alloc, neighbors);
+    v.AddMember("neighbors", neighborsValue, alloc);
+  }
+
+  void Parse(const rapidjson::Value &v) {
+    using rapidjson::Value;
+    if (!v.HasMember("country")) {
+      throw std::invalid_argument("No 'country' in JSON");
+    }
+    const Value &countryValue = v["country"];
+    if (!countryValue.IsString()) {
+      throw std::invalid_argument("Invalid 'country' in JSON");
+    }
+    this->country = countryValue.GetString();
+    if (!v.HasMember("city")) {
+      throw std::invalid_argument("No 'city' in JSON");
+    }
+    const Value &cityValue = v["city"];
+    if (!cityValue.IsString()) {
+      throw std::invalid_argument("Invalid 'city' in JSON");
+    }
+    this->city = cityValue.GetString();
+    if (!v.HasMember("street")) {
+      throw std::invalid_argument("No 'street' in JSON");
+    }
+    const Value &streetValue = v["street"];
+    if (!streetValue.IsString()) {
+      throw std::invalid_argument("Invalid 'street' in JSON");
+    }
+    this->street = streetValue.GetString();
+    if (!v.HasMember("neighbors")) {
+      throw std::invalid_argument("No 'neighbors' in JSON");
+    }
+    const Value &neighborsValue = v["neighbors"];
+    if (!neighborsValue.IsArray()) {
+      throw std::invalid_argument("Invalid 'neighbors' in JSON");
+    }
+    this->neighbors = json::ParseArray<Person>(neighborsValue);
+  }
 };
 
 struct Friend {
-  BOOST_HANA_DEFINE_STRUCT(Friend, (std::string, relation),
-                           (json::Any, secret));
+  std::string relation;
+  json::Any secret;
+
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+    using rapidjson::Value;
+    v.SetObject();
+    v.AddMember("relation", relation, alloc);
+    Value secretValue;
+    secret.Dump(secretValue, alloc);
+    v.AddMember("secret", secretValue, alloc);
+  }
+
+  void Parse(const rapidjson::Value &v) {
+    using rapidjson::Value;
+    if (!v.HasMember("relation")) {
+      throw std::invalid_argument("No 'relation' in JSON");
+    }
+    const Value &relationValue = v["relation"];
+    if (!relationValue.IsString()) {
+      throw std::invalid_argument("Invalid 'relation' in JSON");
+    }
+    this->relation = relationValue.GetString();
+    if (!v.HasMember("secret")) {
+      throw std::invalid_argument("No 'secret' in JSON");
+    }
+    const Value &secretValue = v["secret"];
+    this->secret.Parse(secretValue);
+  }
 };
 
 struct Person {
-  BOOST_HANA_DEFINE_STRUCT(Person, (std::string, name), (int, age),
-                           (Address, address), (std::vector<Friend>, friends),
-                           (json::Any, secret));
+  std::string name;
+  int age;
+  Address address;
+  std::vector<Friend> friends;
+  json::Any secret;
+
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value &v, AllocatorType &alloc) const {
+    using rapidjson::Value;
+    v.SetObject();
+    v.AddMember("name", name, alloc);
+    v.AddMember("age", age, alloc);
+    Value addressValue;
+    address.Dump(addressValue, alloc);
+    v.AddMember("address", addressValue, alloc);
+    Value friendsValue;
+    json::Dump(friendsValue, alloc, friends);
+    v.AddMember("friends", friendsValue, alloc);
+    Value secretValue;
+    secret.Dump(secretValue, alloc);
+    v.AddMember("secret", secretValue, alloc);
+  }
+
+  void Parse(const rapidjson::Value &v) {
+    using rapidjson::Value;
+    if (!v.HasMember("name")) {
+      throw std::invalid_argument("No 'name' in JSON");
+    }
+    const Value &nameValue = v["name"];
+    if (!nameValue.IsString()) {
+      throw std::invalid_argument("Invalid 'name' in JSON");
+    }
+    this->name = nameValue.GetString();
+    if (!v.HasMember("age")) {
+      throw std::invalid_argument("No 'age' in JSON");
+    }
+    const Value &ageValue = v["age"];
+    if (!ageValue.IsInt()) {
+      throw std::invalid_argument("Invalid 'age' in JSON");
+    }
+    this->age = ageValue.GetInt();
+    if (!v.HasMember("address")) {
+      throw std::invalid_argument("No 'address' in JSON");
+    }
+    const Value &addressValue = v["address"];
+    if (!addressValue.IsObject()) {
+      throw std::invalid_argument("Invalid 'address' in JSON");
+    }
+    this->address.Parse(addressValue);
+    if (!v.HasMember("friends")) {
+      throw std::invalid_argument("No 'friends' in JSON");
+    }
+    const Value &friendsValue = v["friends"];
+    if (!friendsValue.IsArray()) {
+      throw std::invalid_argument("Invalid 'friends' in JSON");
+    }
+    this->friends = json::ParseArray<Friend>(friendsValue);
+    if (!v.HasMember("secret")) {
+      throw std::invalid_argument("No 'secret' in JSON");
+    }
+    const Value &secretValue = v["secret"];
+    this->secret.Parse(secretValue);
+  }
 };
 
-// template <typename T>
-// void Serialize(const T &o, rapidjson::Writer<rapidjson::StringBuffer> &w) {
-//   namespace hana = boost::hana;
-//   w.StartObject();
-//   auto accessors = hana::accessors<T>();
-//   boost::hana::for_each(accessors, [&o, &w](auto accessor) {
-//     auto key = boost::hana::first(accessor);
-//     auto get = boost::hana::second(accessor);
-//     auto value = get(o);
-//     w.String(key.c_str());
-//     auto &typeInfo = typeid(value);
-//     if (typeInfo == typeid(std::string)) {
-//       w.String(reinterpret_cast<const std::string &>(value));
-//     } else if (typeInfo == typeid(int)) {
-//       w.Int(reinterpret_cast<const int &>(value));
-//     } else if (typeInfo == typeid(int64_t)) {
-//       w.Int64(reinterpret_cast<const int64_t &>(value));
-//     } else if (typeInfo == typeid(Singer)) {
-//       Serialize(reinterpret_cast<const Singer &>(value), w);
-//     } else if (typeInfo == typeid(Address)) {
-//       Serialize(reinterpret_cast<const Address &>(value), w);
-//     } else if (typeInfo == typeid(Friend)) {
-//       Serialize(reinterpret_cast<const Friend &>(value), w);
-//     } else if (typeInfo == typeid(Person)) {
-//       Serialize(reinterpret_cast<const Person &>(value), w);
-//     } else if (typeInfo == typeid(std::vector<Friend>)) {
-//       const std::vector<Friend> &friends =
-//           reinterpret_cast<const std::vector<Friend> &>(value);
-//       w.StartArray();
-//       for (const auto &f : friends) {
-//         Serialize(f, w);
-//       }
-//       w.EndArray();
-//     } else if (typeInfo == typeid(std::vector<Person>)) {
-//       const std::vector<Person> &persons =
-//           reinterpret_cast<const std::vector<Person> &>(value);
-//       w.StartArray();
-//       for (const auto &p : persons) {
-//         Serialize(p, w);
-//       }
-//       w.EndArray();
-//     } else if (typeInfo == typeid(json::Any)) {
-//       json::Any &any = reinterpret_cast<json::Any &>(value);
-//       if (any.TypeInfo() == typeid(std::string)) {
-//         w.String(json::AnyCast<std::string>(any));
-//       } else if (any.TypeInfo() == typeid(int)) {
-//         w.Int(json::AnyCast<int>(any));
-//       } else if (any.TypeInfo() == typeid(int64_t)) {
-//         w.Int(json::AnyCast<int64_t>(any));
-//       } else if (any.TypeInfo() == typeid(Singer)) {
-//         Serialize(json::AnyCast<Singer>(any), w);
-//       } else if (any.TypeInfo() == typeid(Address)) {
-//         Serialize(json::AnyCast<Address>(any), w);
-//       } else if (any.TypeInfo() == typeid(Friend)) {
-//         Serialize(json::AnyCast<Friend>(any), w);
-//       } else if (any.TypeInfo() == typeid(Person)) {
-//         Serialize(json::AnyCast<Person>(any), w);
-//       } else if (any.IsNull()) {
-//         w.Null();
-//       } else {
-//         w.String("(unknown)");
-//       }
-//     } else {
-//       w.String("(unknown)");
-//     }
-//   });
-//   w.EndObject();
-// }
-
-// template <typename T> std::string Serialize(const T &o) {
-//   using rapidjson::PrettyWriter;
-//   using rapidjson::StringBuffer;
-//   StringBuffer sb;
-//   PrettyWriter<StringBuffer> w(sb);
-//   Serialize(o, w);
-//   return sb.GetString();
-// }
-
-// template <typename T> T Parse(const std::string &json) {
-//   namespace hana = boost::hana;
-//   using rapidjson::Document;
-//   Document document;
-//   document.Parse(json);
-//   T result;
-//   auto accessors = hana::accessors<T>();
-//   boost::hana::for_each(accessors, [&result](auto accessor) {
-//     auto key = boost::hana::first(accessor);
-//     auto get = boost::hana::second(accessor);
-//     if (std::string(key.c_str()) == "type") {
-//     }
-//   });
-//   return result;
-// }
-
-// template <typename Xs> std::string join(Xs &&xs, std::string sep) {
-//   return boost::hana::fold(boost::hana::intersperse(std::forward<Xs>(xs),
-//   sep),
-//                            "", boost::hana::_ + boost::hana::_);
-// }
-
-// std::string quote(std::string s) { return "\"" + s + "\""; }
-
-// template <typename T> auto to_json(T const &x) -> decltype(std::to_string(x))
-// {
-//   return std::to_string(x);
-// }
-
-// std::string to_json(char c) { return quote({c}); }
-
-// std::string to_json(std::string s) { return quote(s); }
-
-// template <typename X>
-// std::enable_if_t<boost::hana::Struct<X>::value, std::string>
-// to_json(std::vector<X> const &xs) {
-//   std::string json = "[";
-//   for (int i = 0; i < xs.size(); i++) {
-//     json.append(to_json(xs[i]));
-//     if (i == xs.size() - 1) {
-//       break;
-//     }
-//     json.append(",");
-//   }
-//   json.append("]");
-//   return json;
-// }
-
-// template <typename Xs>
-// std::enable_if_t<boost::hana::Sequence<Xs>::value, std::string>
-// to_json(Xs const &xs) {
-//   auto json =
-//       boost::hana::transform(xs, [](auto const &x) { return to_json(x); });
-//   return "[" + join(std::move(json), ", ") + "]";
-// }
-
-// template <typename T>
-// std::enable_if_t<boost::hana::Struct<T>::value, std::string>
-// to_json(T const &x) {
-//   auto json = boost::hana::transform(boost::hana::keys(x), [&](auto name) {
-//     auto const &member = boost::hana::at_key(x, name);
-//     return quote(boost::hana::to<char const *>(name)) + " : " +
-//     to_json(member);
-//   });
-//   return "{" + join(std::move(json), ", ") + "}";
-// }
-
-// template <typename T>
-// std::enable_if_t<std::is_same<T, int>::value, T> from_json(std::istream &in)
-// {
-//   T result;
-//   in >> result;
-//   return result;
-// }
-
-// template <typename T>
-// std::enable_if_t<std::is_same<T, std::string>::value, T>
-// from_json(std::istream &in) {
-//   char quote;
-//   in >> quote;
-
-//   T result;
-//   char c;
-//   while (in.get(c) && c != '"') {
-//     result += c;
-//   }
-//   return result;
-// }
-
-// template <typename T>
-// std::enable_if_t<hana::Struct<T>::value, T> from_json(std::istream &in) {
-//   T result;
-//   char brace;
-//   in >> brace;
-
-//   hana::for_each(hana::keys(result), [&](auto key) {
-//     in.ignore(std::numeric_limits<std::streamsize>::max(), ':');
-//     auto &member = hana::at_key(result, key);
-//     using Member = std::remove_reference_t<decltype(member)>;
-//     member = from_json<Member>(in);
-//   });
-//   in >> brace;
-//   return result;
-// }
-
-// template <typename Xs>
-// std::enable_if_t<hana::Sequence<Xs>::value, Xs> from_json(std::istream &in) {
-//   Xs result;
-//   char bracket;
-//   in >> bracket;
-//   hana::length(result).times.with_index([&](auto i) {
-//     if (i != 0u) {
-//       char comma;
-//       in >> comma;
-//     }
-
-//     auto &element = hana::at(result, i);
-//     using Element = std::remove_reference_t<decltype(element)>;
-//     element = from_json<Element>(in);
-//   });
-//   in >> bracket;
-//   return result;
-// }
-
-// struct A {
-//   int a;
-// };
-
 int main() {
+  using rapidjson::Document;
   std::string json;
   // Singer
   Singer s1{"rapper", 16};
   json = json::Dump(s1);
   std::cout << json << std::endl;
+  json = json::DumpPretty(s1);
+  std::cout << json << std::endl;
+  Singer s1Parsed = json::Parse<Singer>(json);
+  json::Any any = s1;
+  Singer s1Casted = json::AnyCast<Singer>(any);
+  try {
+    json::AnyCast<Band>(any);
+  } catch (const std::bad_cast &e) {
+    std::cout << "Can't cast any to Band" << std::endl;
+  }
+  try {
+    json::Parse<Singer>("[]");
+  } catch (const std::exception &e) {
+    std::cout << e.what() << std::endl;
+  }
   // Band
   Band band{{s1, s1}};
   json = json::Dump(band);
   std::cout << json << std::endl;
+  Band bandParsed = json::Parse<Band>(json);
   // Friend
   Friend f1{"my best friend", Singer{"rocker", 18}};
   json = json::Dump(f1);
@@ -272,22 +261,26 @@ int main() {
   Friend f3{"third friend", 3};
   json = json::Dump(f3);
   std::cout << json << std::endl;
+  // Person
   Person p2{"p2", 3, Address{"china", "shanghai", "putuo"}};
   json = json::Dump(p2);
   std::cout << json << std::endl;
+  // Address
   Address addr1{"china", "beijing", "wangjing", {p2}};
   json = json::Dump(addr1);
   std::cout << json << std::endl;
+  // Final!
   Person p1{"p1", 4, addr1, {f1, f2, f3}, "the kind!"};
   json = json::Dump(p1);
   std::cout << json << std::endl;
-
-  // TODO. 以下是伪代码，需要笔试者具体实现 // auto json = dump(p1)
-  // std::cout << json << std::endl // std::cout << p1 << std::endl
-  // auto pp = parse(json); // assert(p1 == pp)
-  // 序列化
-  // 打印序列化结果
-  // 打印 Person 对象 // 反序列化
-  // 反序列化的结果是对的
+  Person p1Parsed = json::Parse<Person>(json);
+  std::string json2;
+  json2 = json::Dump(p1Parsed);
+  std::cout << json2 << std::endl;
+  if (json != json2) {
+    std::cout << "Bad!" << std::endl;
+    return EXIT_FAILURE;
+  }
+  std::cout << "Good!" << std::endl;
   return EXIT_SUCCESS;
 }
