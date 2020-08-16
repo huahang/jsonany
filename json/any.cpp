@@ -4,3 +4,6 @@
  */
 
 #include "any.h"
+
+namespace json {
+}  // namespace json

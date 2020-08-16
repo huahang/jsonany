@@ -2,7 +2,7 @@
   "name": "jsonany",
   "version-string": "0.0.1",
   "dependencies": [
-    "boost-fusion",
+    "boost-hana",
     "rapidjson"
   ]
 }

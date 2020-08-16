@@ -12,11 +12,18 @@
 #define RAPIDJSON_HAS_STDSTRING 1
 #endif  // RAPIDJSON_HAS_STDSTRING
 
+//#ifndef BOOST_HANA_CONFIG_DISABLE_CONCEPT_CHECKS
+//#define BOOST_HANA_CONFIG_DISABLE_CONCEPT_CHECKS 1
+//#endif // BOOST_HANA_CONFIG_DISABLE_CONCEPT_CHECKS
+
+#include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include <boost/hana.hpp>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -29,6 +36,9 @@ class Any;
 
 template <typename ValueType>
 const ValueType& AnyCast(const Any& a);
+
+template <typename T>
+void Serialize(const T& o, rapidjson::Writer<rapidjson::StringBuffer>& w);
 
 class Any final {
  public:
@@ -77,6 +87,9 @@ class Any final {
     return holder != nullptr ? holder->TypeInfo() : typeid(void);
   }
 
+  // is null
+  const bool IsNull() const { return holder == nullptr; }
+
   // get value pointer
   template <typename ValueType>
   const ValueType* ValuePointer() const {
@@ -94,22 +107,6 @@ class Any final {
     return *this;
   }
 
-  // serialization
-  template <typename OutputStream>
-  void Serialize(rapidjson::Writer<OutputStream>& writer) const {
-    if (this->TypeInfo() == typeid(int)) {
-      writer.Int(AnyCast<int>(*this));
-      return;
-    }
-    if (this->TypeInfo() == typeid(int64_t)) {
-      writer.Int64(AnyCast<int64_t>(*this));
-      return;
-    }
-
-    writer.StartObject();
-    writer.EndObject();
-  }
-
  private:
   class HolderInterface {
    public:
@@ -122,9 +119,17 @@ class Any final {
   class ValueHolder : public HolderInterface {
    public:
     ValueHolder(const ValueType& v) : value(v) {}
+
     ValueHolder(ValueType&& v) : value(v) {}
+
     virtual HolderInterface* Clone() const { return new ValueHolder(value); };
+
     virtual const std::type_info& TypeInfo() const { return typeid(ValueType); }
+
+    //        virtual auto Serialize() const -> decltype(ValueType()) {
+    //          return value;
+    //        }
+
     const ValueType value;
   };
 
@@ -141,13 +146,29 @@ const ValueType& AnyCast(const Any& a) {
 }
 
 template <typename T>
-std::string Serialize(const T& o) {
-  using rapidjson::PrettyWriter;
-  using rapidjson::StringBuffer;
-  StringBuffer sb;
-  PrettyWriter<StringBuffer> writer(sb);
-  o.Serialize(writer);
-  return sb.GetString();
+void Serialize(const T& o, rapidjson::Writer<rapidjson::StringBuffer>& w) {
+  namespace hana = boost::hana;
+  w.StartObject();
+  auto accessors = hana::accessors<T>();
+  boost::hana::for_each(accessors, [&o, &w](auto accessor) {
+    auto key = boost::hana::first(accessor);
+    auto get = boost::hana::second(accessor);
+    auto value = get(o);
+    w.String(key.c_str());
+    auto& typeInfo = typeid(value);
+    if (typeInfo == typeid(std::string)) {
+      w.String(reinterpret_cast<const std::string&>(value));
+    } else if (typeInfo == typeid(int)) {
+      w.Int(reinterpret_cast<const int&>(value));
+    } else if (typeInfo == typeid(int64_t)) {
+      w.Int64(reinterpret_cast<const int64_t&>(value));
+    } else if (typeInfo == typeid(json::Any)) {
+      w.String("(json::Any)");
+    } else {
+      w.String("(unknown)");
+    }
+  });
+  w.EndObject();
 }
 
 }  // namespace json
