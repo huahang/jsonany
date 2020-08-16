@@ -17,9 +17,9 @@
 #include <stdint.h>
 #include <string>
 #include <type_traits>
-#include <vector>
 #include <typeinfo>
 #include <utility>
+#include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
