@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "json/any.h"
 
@@ -25,7 +26,7 @@ struct Singer {
 };
 
 struct Band {
-  BOOST_HANA_DEFINE_STRUCT(Band, (fusion::vector<Singer>, singers));
+  BOOST_HANA_DEFINE_STRUCT(Band, (std::vector<Singer>, singers));
 };
 
 struct Address {
@@ -170,6 +171,21 @@ std::string to_json(std::string s) {
   return quote(s);
 }
 
+template <typename X>
+std::enable_if_t<boost::hana::Struct<X>::value, std::string> to_json(
+  std::vector<X> const& xs) {
+  std::string json = "[";
+  for (int i = 0; i < xs.size(); i++) {
+    json.append(to_json(xs[i]));
+    if (i == xs.size() - 1) {
+      break;
+    }
+    json.append(",");
+  }
+  json.append("]");
+  return json;
+}
+
 template <typename Xs>
 std::enable_if_t<boost::hana::Sequence<Xs>::value, std::string> to_json(
     Xs const& xs) {
@@ -257,7 +273,7 @@ int main() {
   Friend f1{"my best friend", Singer{"rocker", 18}};
   std::cout << Serialize(f1) << std::endl;
 
-  Band band{};
+  Band band{{s1,s1}};
   // band.singers.assign_sequence
   // band.singers.push_back(s1);
   std::cout << to_json(band) << std::endl;
