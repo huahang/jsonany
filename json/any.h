@@ -45,16 +45,16 @@ class Any final {
   }
 
   template <typename T>
-  Any(const T& v) : holder(new ValueHolder<T>(v)) {
+  Any(const std::shared_ptr<T> p) : holder(new ValueHolder<T>(p)) {
     jsonValue.SetNull();
   }
 
   template <typename T>
-  Any(const std::shared_ptr<T>& p) : Any(*p) {}
-
-  Any(const char* s) : holder(new ValueHolder<std::string>(std::string(s))) {
+  Any(const T& v) : holder(new ValueHolder<T>(v)) {
     jsonValue.SetNull();
   }
+
+  Any(const char* s) : Any(std::string(s)) {}
 
   Any& operator=(const Any& any) {
     if (any.holder != nullptr) {
@@ -87,7 +87,7 @@ class Any final {
 
   template <typename T>
   const T& Cast() {
-    const T* result = nullptr;
+    std::shared_ptr<T> result = nullptr;
     if (holder == nullptr && (!jsonValue.IsNull())) {
       T o;
       try {
@@ -100,7 +100,7 @@ class Any final {
     const auto& holderType = TypeInfo();
     const auto& valueType = typeid(T);
     if (holderType == valueType) {
-      result = &dynamic_cast<ValueHolder<T>*>(holder)->value;
+      result = dynamic_cast<ValueHolder<T>*>(holder)->value;
     }
     if (result != nullptr) {
       return *result;
@@ -133,13 +133,15 @@ class Any final {
   template <typename ValueType>
   class ValueHolder : public HolderInterface {
    public:
-    ValueHolder(const ValueType& v) : value(v) {}
+    ValueHolder(const ValueType& v)
+        : value(std::shared_ptr<ValueType>(new ValueType(v))) {}
+    ValueHolder(const std::shared_ptr<ValueType>& v) : value(v) {}
     virtual HolderInterface* Clone() const { return new ValueHolder(value); };
     virtual const std::type_info& TypeInfo() const { return typeid(ValueType); }
     virtual void Dump(Any& any) {
-      value.Dump(any.jsonValue, any.jsonDoc.GetAllocator());
+      value->Dump(any.jsonValue, any.jsonDoc.GetAllocator());
     }
-    ValueType value;
+    std::shared_ptr<ValueType> value;
   };
 
   HolderInterface* holder;
@@ -151,12 +153,12 @@ class Any final {
 
 template <>
 inline void Any::ValueHolder<std::string>::Dump(Any& any) {
-  any.jsonValue.SetString(this->value, any.jsonDoc.GetAllocator());
+  any.jsonValue.SetString(*this->value, any.jsonDoc.GetAllocator());
 }
 
 template <>
 inline void Any::ValueHolder<int>::Dump(Any& any) {
-  any.jsonValue.SetInt(this->value);
+  any.jsonValue.SetInt(*this->value);
 }
 
 template <typename T>
