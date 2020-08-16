@@ -86,27 +86,22 @@ class Any final {
   }
 
   template <typename T>
-  const T* ValuePointer() {
+  const T& Cast() {
+    const T* result = nullptr;
     if (holder == nullptr && (!jsonValue.IsNull())) {
       T o;
       try {
         o.Parse(this->jsonValue);
       } catch (const std::invalid_argument& e) {
-        return nullptr;
+        result = nullptr;
       }
       holder = new ValueHolder<T>(o);
     }
     const auto& holderType = TypeInfo();
     const auto& valueType = typeid(T);
-    if (holderType != valueType) {
-      return nullptr;
+    if (holderType == valueType) {
+      result = &dynamic_cast<ValueHolder<T>*>(holder)->value;
     }
-    return &static_cast<ValueHolder<T>*>(holder)->value;
-  }
-
-  template <typename T>
-  const T& Cast() {
-    const T* result = ValuePointer<T>();
     if (result != nullptr) {
       return *result;
     }
