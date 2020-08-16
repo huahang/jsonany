@@ -38,8 +38,6 @@ class Any;
 
 template <typename ValueType> const ValueType &AnyCast(const Any &a);
 
-template <typename T> auto Dump(const T &o, Writer &w) -> decltype(o.Dump(w));
-
 template <typename T> void Dump(const std::vector<T> &, Writer &);
 
 template <typename T>
@@ -111,7 +109,13 @@ public:
   }
 
   // serialization
-  void Dump(Writer &w) const { holder->Dump(w); }
+  void Dump(Writer &w) const {
+    if (holder == nullptr) {
+      w.Null();
+      return;
+    }
+    holder->Dump(w);
+  }
 
 private:
   class HolderInterface {
@@ -130,15 +134,20 @@ private:
 
     virtual const std::type_info &TypeInfo() const { return typeid(ValueType); }
 
-    virtual void Dump(Writer &w) const {
-      w.String("(ValueHolder)");
-      // json::Dump(value, w);
-    };
+    virtual void Dump(Writer &w) const { json::Dump(value, w); };
 
     const ValueType value;
   };
 
   HolderInterface *holder;
+};
+
+template <> inline void Any::ValueHolder<std::string>::Dump(Writer &w) const {
+  w.String(this->value);
+};
+
+template <> inline void Any::ValueHolder<int>::Dump(Writer &w) const {
+  w.Int(this->value);
 };
 
 template <typename ValueType> const ValueType &AnyCast(const Any &a) {
@@ -158,10 +167,6 @@ inline void Dump(const int i, Writer &w) { w.Int(i); }
 inline void Dump(const int64_t i, Writer &w) { w.Int64(i); }
 
 inline void Dump(const std::string &s, Writer &w) { w.String(s); }
-
-template <typename T> auto Dump(const T &o, Writer &w) -> decltype(o.Dump(w)) {
-  o.Dump(w);
-}
 
 template <typename T>
 std::enable_if_t<boost::hana::Struct<T>::value, void> Dump(const T &o,
@@ -183,10 +188,6 @@ template <typename T> void Dump(const std::vector<T> &array, Writer &w) {
   }
   w.EndArray();
 }
-
-// template <typename T> void Dump(const T & o, Writer &w) {
-//  w.String("(Unknown)");
-//}
 
 template <typename T>
 std::enable_if_t<boost::hana::Struct<T>::value, std::string> Dump(const T &o) {

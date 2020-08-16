@@ -5,5 +5,6 @@
 
 #include "any.h"
 
-namespace json {
-}  // namespace json
+#include <string>
+
+namespace json {} // namespace json
