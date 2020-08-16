@@ -5,17 +5,27 @@
 
 #include <stdlib.h>
 
+#include <boost/fusion/include/vector.hpp>
 #include <boost/hana.hpp>
+#include <boost/hana/ext/boost/fusion/vector.hpp>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "json/any.h"
 
+namespace hana = boost::hana;
+namespace fusion = boost::fusion;
+
 struct Person;
 
 struct Singer {
   BOOST_HANA_DEFINE_STRUCT(Singer, (std::string, type), (int, age));
+};
+
+struct Band {
+  BOOST_HANA_DEFINE_STRUCT(Band, (fusion::vector<Singer>, singers));
 };
 
 struct Address {
@@ -139,26 +149,32 @@ T Parse(const std::string& json) {
 
 template <typename Xs>
 std::string join(Xs&& xs, std::string sep) {
-  return boost::hana::fold(boost::hana::intersperse(std::forward<Xs>(xs), sep), "", boost::hana::_ + boost::hana::_);
+  return boost::hana::fold(boost::hana::intersperse(std::forward<Xs>(xs), sep),
+                           "", boost::hana::_ + boost::hana::_);
 }
 
-std::string quote(std::string s) { return "\"" + s + "\""; }
+std::string quote(std::string s) {
+  return "\"" + s + "\"";
+}
 
 template <typename T>
 auto to_json(T const& x) -> decltype(std::to_string(x)) {
   return std::to_string(x);
 }
 
-std::string to_json(char c) { return quote({c}); }
+std::string to_json(char c) {
+  return quote({c});
+}
 
-std::string to_json(std::string s) { return quote(s); }
+std::string to_json(std::string s) {
+  return quote(s);
+}
 
 template <typename Xs>
-std::enable_if_t<boost::hana::Sequence<Xs>::value,
-  std::string> to_json(Xs const& xs) {
-  auto json = boost::hana::transform(xs, [](auto const& x) {
-    return to_json(x);
-  });
+std::enable_if_t<boost::hana::Sequence<Xs>::value, std::string> to_json(
+    Xs const& xs) {
+  auto json =
+      boost::hana::transform(xs, [](auto const& x) { return to_json(x); });
   return "[" + join(std::move(json), ", ") + "]";
 }
 
@@ -172,16 +188,80 @@ std::enable_if_t<boost::hana::Struct<T>::value, std::string> to_json(
   return "{" + join(std::move(json), ", ") + "}";
 }
 
+template <typename T>
+std::enable_if_t<std::is_same<T, int>::value, T> from_json(std::istream& in) {
+  T result;
+  in >> result;
+  return result;
+}
+
+template <typename T>
+std::enable_if_t<std::is_same<T, std::string>::value, T> from_json(
+    std::istream& in) {
+  char quote;
+  in >> quote;
+
+  T result;
+  char c;
+  while (in.get(c) && c != '"') {
+    result += c;
+  }
+  return result;
+}
+
+template <typename T>
+std::enable_if_t<hana::Struct<T>::value, T> from_json(std::istream& in) {
+  T result;
+  char brace;
+  in >> brace;
+
+  hana::for_each(hana::keys(result), [&](auto key) {
+    in.ignore(std::numeric_limits<std::streamsize>::max(), ':');
+    auto& member = hana::at_key(result, key);
+    using Member = std::remove_reference_t<decltype(member)>;
+    member = from_json<Member>(in);
+  });
+  in >> brace;
+  return result;
+}
+
+template <typename Xs>
+std::enable_if_t<hana::Sequence<Xs>::value, Xs> from_json(std::istream& in) {
+  Xs result;
+  char bracket;
+  in >> bracket;
+  hana::length(result).times.with_index([&](auto i) {
+    if (i != 0u) {
+      char comma;
+      in >> comma;
+    }
+
+    auto& element = hana::at(result, i);
+    using Element = std::remove_reference_t<decltype(element)>;
+    element = from_json<Element>(in);
+  });
+  in >> bracket;
+  return result;
+}
+
 int main() {
   std::string json;
   Singer s1{"rapper", 16};
   json = Serialize(s1);
   std::cout << json << std::endl;
+  std::istringstream istream(json);
+  Singer s1Parsed = from_json<Singer>(istream);
   json = to_json(s1);
   std::cout << json << std::endl;
-  Singer s1Parsed = Parse<Singer>(json);
+
   Friend f1{"my best friend", Singer{"rocker", 18}};
   std::cout << Serialize(f1) << std::endl;
+
+  Band band{};
+  // band.singers.assign_sequence
+  // band.singers.push_back(s1);
+  std::cout << to_json(band) << std::endl;
+
   auto& f1Secret = json::AnyCast<Singer>(f1.secret);
   std::cout << Serialize(f1Secret) << std::endl;
   Friend f2{"new friend", "little girl"};
