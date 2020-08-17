@@ -7,47 +7,39 @@
 
 #include <gtest/gtest.h>
 
-struct A
-{
+struct A {
   std::string type;
   int age;
 
   template <typename AllocatorType>
-  void Dump(rapidjson::Value &v, AllocatorType &alloc)
-  {
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
     v.SetObject();
     v.AddMember("type", type, alloc);
     v.AddMember("age", age, alloc);
   }
 
-  void Parse(const rapidjson::Value &v)
-  {
+  void Parse(const rapidjson::Value& v) {
     using rapidjson::Value;
-    if (!v.HasMember("type"))
-    {
+    if (!v.HasMember("type")) {
       throw std::invalid_argument("No 'type' in JSON");
     }
-    const Value &typeValue = v["type"];
-    if (!typeValue.IsString())
-    {
+    const Value& typeValue = v["type"];
+    if (!typeValue.IsString()) {
       throw std::invalid_argument("Invalid 'type' in JSON");
     }
     this->type = typeValue.GetString();
-    if (!v.HasMember("age"))
-    {
+    if (!v.HasMember("age")) {
       throw std::invalid_argument("No 'age' in JSON");
     }
-    const Value &ageValue = v["age"];
-    if (!ageValue.IsInt())
-    {
+    const Value& ageValue = v["age"];
+    if (!ageValue.IsInt()) {
       throw std::invalid_argument("Invalid 'age' in JSON");
     }
     this->age = ageValue.GetInt();
   }
 };
 
-TEST(JsonAnyTest, TestDumpAndParse)
-{
+TEST(JsonAnyTest, TestDumpAndParse) {
   A a1{"Ana", 18}, a2;
   json::Any a3;
   std::string json1, json2, json3;

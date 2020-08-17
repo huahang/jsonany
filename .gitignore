@@ -33,12 +33,14 @@
 
 # Projects
 /.idea
+/.vs
 /.vscode
+/any
 /build
 /cmake-build*
-/vcpkg_installed
-/any
 /jsonany_test
+/out
+/vcpkg_installed
 
 # cmake
 /cmake_install.cmake

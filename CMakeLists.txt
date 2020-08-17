@@ -11,12 +11,14 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_library(jsonany
   json/any.cpp
-  json/any.h)
+  json/any.h
+)
 
 target_include_directories(jsonany PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
 
 add_executable(any
-  main.cpp)
+  main.cpp
+)
 
 target_include_directories(any PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(any PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
@@ -28,7 +30,8 @@ enable_testing()
 find_package(GTest CONFIG REQUIRED)
 
 add_executable(jsonany_test
-  jsonany_test.cpp)
+  jsonany_test.cpp
+)
 
 target_include_directories(jsonany_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(jsonany_test PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
