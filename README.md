@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-cmake version >= 3.10
+cmake version >= 3.14
 
 a c++ compiler that supports c++14
 
