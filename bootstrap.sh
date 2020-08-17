@@ -2,5 +2,4 @@
 
 git submodule init
 git submodule update
-cmake .
-cmake --build .
+./build.sh
