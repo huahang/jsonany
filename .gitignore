@@ -49,3 +49,11 @@
 /CTestTestfile.cmake
 /Makefile
 /Testing
+
+# Visual Studio
+/*.vcxproj
+/*.vcxproj.filters
+/*.sln
+/Debug
+/jsonany.dir
+/x64
