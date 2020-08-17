@@ -18,7 +18,7 @@ struct Person;
 
 struct Singer {
   std::string type;
-  int age;
+  int age = 0;
 
   template <typename AllocatorType>
   void Dump(rapidjson::Value& v, AllocatorType& alloc) {
@@ -162,7 +162,7 @@ struct Friend {
 
 struct Person {
   std::string name;
-  int age;
+  int age = 0;
   Address address;
   std::vector<Friend> friends;
   json::Any secret;
@@ -252,7 +252,7 @@ int main() {
   // Bad cast
   try {
     json::AnyCast<Band>(any);
-  } catch (const std::bad_cast& e) {
+  } catch (const std::bad_cast&) {
     std::cout << "Can't cast any to Band" << std::endl;
   }
   try {

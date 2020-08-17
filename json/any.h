@@ -92,14 +92,14 @@ class Any final {
       T o;
       try {
         o.Parse(this->jsonValue);
-      } catch (const std::invalid_argument& e) {
+      } catch (const std::invalid_argument&) {
         result = nullptr;
       }
       holder = new ValueHolder<T>(o);
     }
     const auto& holderType = TypeInfo();
     const auto& valueType = typeid(T);
-    if (holderType == valueType) {
+    if (holderType == valueType && holder != nullptr) {
       result = dynamic_cast<ValueHolder<T>*>(holder)->value;
     }
     if (result != nullptr) {

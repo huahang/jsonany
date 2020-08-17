@@ -9,7 +9,7 @@
 
 struct A {
   std::string type;
-  int age;
+  int age = 0;
 
   template <typename AllocatorType>
   void Dump(rapidjson::Value& v, AllocatorType& alloc) {
