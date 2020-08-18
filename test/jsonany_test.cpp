@@ -98,7 +98,7 @@ TEST(JsonAnyTest, TestAddress) {
   doTestOnStruct<Address>(json);
 }
 
-TEST(JsonAnyTest, TestAny) {
+TEST(JsonAnyTest, TestAny1) {
   static const char* json =
       "{\"name\":\"p1\",\"age\":4,\"address\":{\"country\":\"china\",\"city\":"
       "\"beijing\",\"street\":\"wangjing\",\"neighbors\":[{\"name\":\"p2\","
@@ -109,6 +109,23 @@ TEST(JsonAnyTest, TestAny) {
       "\"new friend\",\"secret\":\"little girl\"},{\"relation\":\"third "
       "friend\",\"secret\":3}],\"secret\":\"the kind!\"}";
   doTestOnStruct<json::Any>(json);
+}
+
+TEST(JsonAnyTest, TestAny2) {
+  static const char* json =
+      "{\"name\":\"p1\",\"age\":4,\"address\":{\"country\":\"china\",\"city\":"
+      "\"beijing\",\"street\":\"wangjing\",\"neighbors\":[{\"name\":\"p2\","
+      "\"age\":3,\"address\":{\"country\":\"china\",\"city\":\"shanghai\","
+      "\"street\":\"putuo\",\"neighbors\":[]},\"friends\":[],\"secret\":null}]}"
+      ",\"friends\":[{\"relation\":\"my best "
+      "friend\",\"secret\":{\"type\":\"rocker\",\"age\":18}},{\"relation\":"
+      "\"new friend\",\"secret\":\"little girl\"},{\"relation\":\"third "
+      "friend\",\"secret\":3}],\"secret\":\"the kind!\"}";
+  json::Any any;
+  json::Parse(any, json);
+  EXPECT_EQ(json, json::Dump(any));
+  Person p = json::AnyCast<Person>(any);
+  EXPECT_EQ(json, json::Dump(p));
 }
 
 TEST(JsonAnyTest, TestAll) {
