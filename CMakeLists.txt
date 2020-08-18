@@ -14,7 +14,7 @@ add_library(jsonany STATIC
   json/any.h
 )
 
-target_include_directories(jsonany PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
+target_include_directories(jsonany PUBLIC ${RAPIDJSON_INCLUDE_DIRS})
 
 enable_testing()
 
