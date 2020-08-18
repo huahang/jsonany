@@ -1,18 +1,9 @@
 /**
  * @author Huahang Liu
- * @since 2020-08-15
+ * @since 2020-08-18
  */
 
 #include <json/any.h>
-
-#include <algorithm>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include <stdlib.h>
 
 struct Person;
 
@@ -226,88 +217,28 @@ struct Person {
   }
 };
 
-int main() {
-  using rapidjson::Document;
-  std::string json;
-  // Singer
-  Singer s1{"rapper", 16};
-  json = json::DumpPretty(s1);
-  std::cout << json << std::endl;
-  json = json::Dump(s1);
-  std::cout << "s1: " << json << std::endl;
-  Singer s1Parsed = json::Parse<Singer>(json);
-  json = json::Dump(s1Parsed);
-  std::cout << "s1 parsed: " << json << std::endl;
-  json::Any any = s1;
-  json = json::Dump(any);
-  std::cout << "s1 any: " << json << std::endl;
-  Singer s1Casted = json::AnyCast<Singer>(any);
-  json = json::Dump(s1Casted);
-  std::cout << "s1 casted: " << json << std::endl;
-  // Any a = std::make_shared<Singer>(xxxx);
-  auto spSinger = std::make_shared<Singer>(Singer{"rapper", 16});
-  any = spSinger;
-  json = json::Dump(any);
-  std::cout << "s1 sp: " << json << std::endl;
-  // Bad cast
-  try {
-    json::AnyCast<Band>(any);
-  } catch (const std::bad_cast&) {
-    std::cout << "Can't cast any to Band" << std::endl;
+struct NonCopyable {
+  NonCopyable() {}
+
+  NonCopyable(const NonCopyable& a) = delete;
+
+  std::string name;
+
+  template <typename AllocatorType>
+  void Dump(rapidjson::Value& v, AllocatorType& alloc) {
+    v.SetObject();
+    v.AddMember("name", name, alloc);
   }
-  try {
-    json::Parse<Singer>("[]");
-  } catch (const std::exception& e) {
-    std::cout << e.what() << std::endl;
+
+  void Parse(const rapidjson::Value& v) {
+    using rapidjson::Value;
+    if (!v.HasMember("name")) {
+      throw std::invalid_argument("No 'name' in JSON");
+    }
+    const Value& nameValue = v["name"];
+    if (!nameValue.IsString()) {
+      throw std::invalid_argument("Invalid 'name' in JSON");
+    }
+    this->name = nameValue.GetString();
   }
-  // Band
-  Band band{{s1, s1}};
-  json = json::Dump(band);
-  std::cout << "band: " << json << std::endl;
-  Band bandParsed = json::Parse<Band>(json);
-  json = json::Dump(bandParsed);
-  std::cout << "band parsed: " << json << std::endl;
-  any = band;
-  json = json::Dump(any);
-  std::cout << "band any: " << json << std::endl;
-  // Friend
-  Friend f1{"my best friend", Singer{"rocker", 18}};
-  json = json::Dump(f1);
-  std::cout << json << std::endl;
-  Friend f2{"new friend", "little girl"};
-  json = json::Dump(f2);
-  std::cout << json << std::endl;
-  Friend f3{"third friend", 3};
-  json = json::Dump(f3);
-  std::cout << json << std::endl;
-  // Person
-  Person p2{"p2", 3, Address{"china", "shanghai", "putuo"}};
-  json = json::Dump(p2);
-  std::cout << json << std::endl;
-  // Address
-  Address addr1{"china", "beijing", "wangjing", {p2}};
-  json = json::Dump(addr1);
-  std::cout << json << std::endl;
-  // Final!
-  Person p1{"p1", 4, addr1, {f1, f2, f3}, "the kind!"};
-  json = json::Dump(p1);
-  std::cout << json << std::endl;
-  Person p1Parsed = json::Parse<Person>(json);
-  std::string json2;
-  json2 = json::Dump(p1Parsed);
-  std::cout << json2 << std::endl;
-  json::Any anyPerson = std::make_shared<Person>(p1);
-  std::string json3;
-  json3 = json::Dump(anyPerson);
-  std::cout << json3 << std::endl;
-  if (json != json2) {
-    std::cout << "Bad!" << std::endl;
-    return EXIT_FAILURE;
-  }
-  if (json != json3) {
-    std::cout << "Bad!" << std::endl;
-    return EXIT_FAILURE;
-  }
-  std::cout << "Good!" << std::endl;
-  return EXIT_SUCCESS;
-}
+};

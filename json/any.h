@@ -30,6 +30,12 @@
 
 namespace json {
 
+template <typename T>
+std::string Dump(T& obj);
+
+template <typename T>
+void Parse(T& obj, const std::string& json);
+
 class Any final {
  public:
   Any() : holder(nullptr) { jsonValue.SetNull(); }
@@ -45,7 +51,7 @@ class Any final {
   }
 
   template <typename T>
-  Any(const std::shared_ptr<T> p) : holder(new ValueHolder<T>(p)) {
+  Any(const std::shared_ptr<T> p) : holder(new SharedPointerHolder<T>(p)) {
     jsonValue.SetNull();
   }
 
@@ -75,8 +81,8 @@ class Any final {
   }
 
   template <typename T>
-  Any& operator=(const std::shared_ptr<T>& p) {
-    holder = new ValueHolder<T>(*p);
+  Any& operator=(const std::shared_ptr<T> p) {
+    holder = new SharedPointerHolder<T>(p);
     jsonValue.SetNull();
     return *this;
   }
@@ -86,26 +92,17 @@ class Any final {
   }
 
   template <typename T>
-  const T& Cast() {
-    std::shared_ptr<T> result = nullptr;
-    if (holder == nullptr && (!jsonValue.IsNull())) {
-      T o;
-      try {
-        o.Parse(this->jsonValue);
-      } catch (const std::invalid_argument&) {
-        result = nullptr;
-      }
-      holder = new ValueHolder<T>(o);
+  void Cast(T& t) {
+    jsonToHolder<T>();
+    if (holder == nullptr) {
+      throw std::bad_cast();
     }
     const auto& holderType = TypeInfo();
     const auto& valueType = typeid(T);
-    if (holderType == valueType && holder != nullptr) {
-      result = dynamic_cast<ValueHolder<T>*>(holder)->value;
+    if (holderType != valueType) {
+      throw std::bad_cast();
     }
-    if (result != nullptr) {
-      return *result;
-    }
-    throw std::bad_cast();
+    holder->Cast(&t);
   }
 
   template <typename AllocatorType>
@@ -122,24 +119,80 @@ class Any final {
   }
 
  private:
+  template <typename T>
+  bool jsonToHolder() {
+    bool result = false;
+    if (holder == nullptr && (!jsonValue.IsNull())) {
+      try {
+        holder = new SharedPointerHolder<T>();
+        dynamic_cast<SharedPointerHolder<T>*>(holder)->value->Parse(
+            this->jsonValue  //
+        );
+      } catch (const std::invalid_argument&) {
+        holder = nullptr;
+        result = false;
+        return result;
+      }
+      result = true;
+    }
+    return result;
+  }
+
+ private:
   class HolderInterface {
    public:
     virtual HolderInterface* Clone() const = 0;
     virtual const std::type_info& TypeInfo() const = 0;
+    virtual const std::type_info& HolderTypeInfo() const = 0;
     virtual void Dump(Any& any) = 0;
+    virtual void* ValuePointer() = 0;
+    virtual void Cast(void*) = 0;
     virtual ~HolderInterface() {}
   };
 
   template <typename ValueType>
   class ValueHolder : public HolderInterface {
    public:
-    ValueHolder(const ValueType& v)
-        : value(std::shared_ptr<ValueType>(new ValueType(v))) {}
-    ValueHolder(const std::shared_ptr<ValueType>& v) : value(v) {}
+    // ValueType is copy constructible
+    ValueHolder(                                           //
+        const typename std::enable_if<                     //
+            std::is_copy_constructible<ValueType>::value,  //
+            ValueType>::type& v)
+        : value(v) {}
     virtual HolderInterface* Clone() const { return new ValueHolder(value); };
     virtual const std::type_info& TypeInfo() const { return typeid(ValueType); }
+    virtual const std::type_info& HolderTypeInfo() const {
+      return typeid(ValueHolder<ValueType>);
+    }
+    virtual void Dump(Any& any) {
+      value.Dump(any.jsonValue, any.jsonDoc.GetAllocator());
+    }
+    virtual void* ValuePointer() { return &value; }
+    virtual void Cast(void* v) { *reinterpret_cast<ValueType*>(v) = value; }
+    ValueType value;
+  };
+
+  template <typename ValueType>
+  class SharedPointerHolder : public HolderInterface {
+   public:
+    // ValueType must be default constructible
+    SharedPointerHolder() : value(new ValueType()) {}
+    // ValueType is wrapped inside a shared pointer
+    SharedPointerHolder(const std::shared_ptr<ValueType>& v) : value(v) {}
+    virtual HolderInterface* Clone() const {
+      return new SharedPointerHolder(value);
+    };
+    virtual const std::type_info& TypeInfo() const { return typeid(ValueType); }
+    virtual const std::type_info& HolderTypeInfo() const {
+      return typeid(SharedPointerHolder<ValueType>);
+    }
     virtual void Dump(Any& any) {
       value->Dump(any.jsonValue, any.jsonDoc.GetAllocator());
+    }
+    virtual void* ValuePointer() { return value.get(); }
+    virtual void Cast(void* v) {
+      auto jsonString = json::Dump<ValueType>(*value);
+      json::Parse(*reinterpret_cast<ValueType*>(v), jsonString);
     }
     std::shared_ptr<ValueType> value;
   };
@@ -152,18 +205,23 @@ class Any final {
 };
 
 template <>
-inline void Any::ValueHolder<std::string>::Dump(Any& any) {
-  any.jsonValue.SetString(*this->value, any.jsonDoc.GetAllocator());
-}
+void Any::SharedPointerHolder<std::string>::Dump(Any&);
 
 template <>
-inline void Any::ValueHolder<int>::Dump(Any& any) {
-  any.jsonValue.SetInt(*this->value);
-}
+void Any::SharedPointerHolder<int>::Dump(Any&);
+
+template <>
+void Any::ValueHolder<std::string>::Dump(Any&);
+
+template <>
+void Any::ValueHolder<int>::Dump(Any&);
 
 template <typename T>
-const T& AnyCast(Any& any) {
-  return any.Cast<T>();
+typename std::enable_if<std::is_copy_constructible<T>::value, T>::type  //
+AnyCast(Any& any) {
+  T obj;
+  any.Cast(obj);
+  return obj;
 }
 
 template <typename T, typename AllocatorType>
@@ -226,7 +284,10 @@ std::vector<T> ParseArray(const rapidjson::Value& value) {
 }
 
 template <typename T>
-T Parse(const std::string& json) {
+void Parse(                  //
+    T& obj,                  //
+    const std::string& json  //
+) {
   using rapidjson::Document;
   using rapidjson::Value;
   Document doc;
@@ -239,8 +300,16 @@ T Parse(const std::string& json) {
   Value v;
   v.SetObject();
   v.Set(object);
+  obj.Parse(v);
+}
+
+template <typename T>
+typename std::enable_if<std::is_copy_constructible<T>::value, T>::type
+Parse(                       //
+    const std::string& json  //
+) {
   T ret;
-  ret.Parse(v);
+  Parse(ret, json);
   return ret;
 }
 
