@@ -126,6 +126,14 @@ TEST(JsonAnyTest, TestAny2) {
   EXPECT_EQ(json, json::Dump(any));
   Person p = json::AnyCast<Person>(any);
   EXPECT_EQ(json, json::Dump(p));
+  any = any;
+  EXPECT_EQ(json, json::Dump(any));
+  any = std::make_shared<json::Any>(any);
+  EXPECT_EQ(json, json::Dump(any));
+  any = p;
+  EXPECT_EQ(json, json::Dump(any));
+  any = std::make_shared<json::Any>(p);
+  EXPECT_EQ(json, json::Dump(any));
 }
 
 TEST(JsonAnyTest, TestAll) {
