@@ -102,7 +102,7 @@ class Any final {
     if (holderType != valueType) {
       throw std::bad_cast();
     }
-    holder->Cast(&t);
+    holder->CopyOut(&t);
   }
 
   template <typename AllocatorType>
@@ -145,8 +145,7 @@ class Any final {
     virtual const std::type_info& TypeInfo() const = 0;
     virtual const std::type_info& HolderTypeInfo() const = 0;
     virtual void Dump(Any& any) = 0;
-    virtual void* ValuePointer() = 0;
-    virtual void Cast(void*) = 0;
+    virtual void CopyOut(void*) = 0;
     virtual ~HolderInterface() {}
   };
 
@@ -167,8 +166,7 @@ class Any final {
     virtual void Dump(Any& any) {
       value.Dump(any.jsonValue, any.jsonDoc.GetAllocator());
     }
-    virtual void* ValuePointer() { return &value; }
-    virtual void Cast(void* v) { *reinterpret_cast<ValueType*>(v) = value; }
+    virtual void CopyOut(void* v) { *reinterpret_cast<ValueType*>(v) = value; }
     ValueType value;
   };
 
@@ -189,8 +187,7 @@ class Any final {
     virtual void Dump(Any& any) {
       value->Dump(any.jsonValue, any.jsonDoc.GetAllocator());
     }
-    virtual void* ValuePointer() { return value.get(); }
-    virtual void Cast(void* v) {
+    virtual void CopyOut(void* v) {
       auto jsonString = json::Dump<ValueType>(*value);
       json::Parse(*reinterpret_cast<ValueType*>(v), jsonString);
     }
