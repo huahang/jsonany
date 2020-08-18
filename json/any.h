@@ -202,16 +202,24 @@ class Any final {
 };
 
 template <>
-void Any::SharedPointerHolder<std::string>::Dump(Any&);
+void Any::SharedPointerHolder<std::string>::Dump(Any& any) {
+  any.jsonValue.SetString(*this->value, any.jsonDoc.GetAllocator());
+}
 
 template <>
-void Any::SharedPointerHolder<int>::Dump(Any&);
+void Any::SharedPointerHolder<int>::Dump(Any& any) {
+  any.jsonValue.SetInt(*this->value);
+}
 
 template <>
-void Any::ValueHolder<std::string>::Dump(Any&);
+void Any::ValueHolder<std::string>::Dump(Any& any) {
+  any.jsonValue.SetString(this->value, any.jsonDoc.GetAllocator());
+}
 
 template <>
-void Any::ValueHolder<int>::Dump(Any&);
+void Any::ValueHolder<int>::Dump(Any& any) {
+  any.jsonValue.SetInt(this->value);
+}
 
 template <typename T>
 typename std::enable_if<std::is_copy_constructible<T>::value, T>::type  //
@@ -249,6 +257,16 @@ std::string Dump(T& obj) {
   doc.Set(v.GetObject());
   doc.Accept(w);
   return sb.GetString();
+}
+
+template <>
+std::string Dump(std::string& obj) {
+  return obj;
+}
+
+template <>
+std::string Dump(int& obj) {
+  return std::to_string(obj);
 }
 
 template <typename T>
@@ -298,6 +316,16 @@ void Parse(                  //
   v.SetObject();
   v.Set(object);
   obj.Parse(v);
+}
+
+template <>
+void Parse(std::string& obj, const std::string& json) {
+  obj = json;
+}
+
+template <>
+void Parse(int& obj, const std::string& json) {
+  obj = std::stoi(json);
 }
 
 template <typename T>
