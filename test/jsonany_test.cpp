@@ -43,6 +43,61 @@ TEST(JsonAnyTest, TestSinger) {
   doTestOnStruct<Singer>("{\"type\":\"rapper\",\"age\":18}");
 }
 
+TEST(JsonAnyTest, TestPersion1) {
+  static const char* json =
+      "{\"name\":\"p1\",\"age\":4,\"address\":{\"country\":\"china\",\"city\":"
+      "\"beijing\",\"street\":\"wangjing\",\"neighbors\":[{\"name\":\"p2\","
+      "\"age\":3,\"address\":{\"country\":\"china\",\"city\":\"shanghai\","
+      "\"street\":\"putuo\",\"neighbors\":[]},\"friends\":[],\"secret\":null}]}"
+      ",\"friends\":[{\"relation\":\"my best "
+      "friend\",\"secret\":{\"type\":\"rocker\",\"age\":18}},{\"relation\":"
+      "\"new friend\",\"secret\":\"little girl\"},{\"relation\":\"third "
+      "friend\",\"secret\":3}],\"secret\":\"the kind!\"}";
+  doTestOnStruct<Person>(json);
+}
+
+TEST(JsonAnyTest, TestPersion2) {
+  static const char* json =
+      "{\"name\":\"p2\",\"age\":3,\"address\":{\"country\":\"china\",\"city\":"
+      "\"shanghai\",\"street\":\"putuo\",\"neighbors\":[]},\"friends\":[],"
+      "\"secret\":null}";
+  doTestOnStruct<Person>(json);
+}
+
+TEST(JsonAnyTest, TestBand) {
+  static const char* json =
+      "{\"singers\":[{\"type\":\"rapper\",\"age\":16},{\"type\":\"rocker\","
+      "\"age\":18}]}";
+  doTestOnStruct<Band>(json);
+}
+
+TEST(JsonAnyTest, TestFriend1) {
+  static const char* json =
+      "{\"relation\":\"my best "
+      "friend\",\"secret\":{\"type\":\"rocker\",\"age\":18}}";
+  doTestOnStruct<Friend>(json);
+}
+
+TEST(JsonAnyTest, TestFriend2) {
+  static const char* json =
+      "{\"relation\":\"new friend\",\"secret\":\"little girl\"}";
+  doTestOnStruct<Friend>(json);
+}
+
+TEST(JsonAnyTest, TestFriend3) {
+  static const char* json = "{\"relation\":\"third friend\",\"secret\":3}";
+  doTestOnStruct<Friend>(json);
+}
+
+TEST(JsonAnyTest, TestAddress) {
+  static const char* json =
+      "{\"country\":\"china\",\"city\":\"beijing\",\"street\":\"wangjing\","
+      "\"neighbors\":[{\"name\":\"p2\",\"age\":3,\"address\":{\"country\":"
+      "\"china\",\"city\":\"shanghai\",\"street\":\"putuo\",\"neighbors\":[]},"
+      "\"friends\":[],\"secret\":null}]}";
+  doTestOnStruct<Address>(json);
+}
+
 TEST(JsonAnyTest, TestAll) {
   std::string json;
   // Singer
